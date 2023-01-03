@@ -15,6 +15,10 @@
 class SSD1331{
 
     private:
+    static const char width = 96;
+    static const char height = 64;
+    static const char max_w = width-1;
+    static const char max_h = height-1;
     // pin assign for ESP32 VSPI
     static const int pin_SCLK = 18; // IO18 fixed
     static const int pin_SDIN = 23; // IO23 fixed

@@ -69,15 +69,15 @@ void SSD1331::rotate(){
 }
 
 void SSD1331::send_frame(unsigned short *p_data){
-    set_colmun_address( 0, 95 );
-    set_row_address( 0, 63 );
-    send_data( p_data, 12288 );
+    set_colmun_address( 0, max_w );
+    set_row_address( 0, max_h );
+    send_data( p_data, 12288 ); // 96 x 64 x 2
 }
 
 void SSD1331::send_frame(unsigned char *p_data){
-    set_colmun_address( 0, 95 );
-    set_row_address( 0, 63 );
-    send_data( p_data, 61144 );
+    set_colmun_address( 0, width );
+    set_row_address( 0, max_h );
+    send_data( p_data, 6144 ); // 96 x 64
 }
 
 
