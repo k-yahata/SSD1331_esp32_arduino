@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include "SSD1331.hpp"
-void SSD1331::init( int pin_DCCntl, int pin_RST, int pin_CS ){
+void SSD1331::init( int pin_DCCntl, int pin_RST, int pin_CS, COLOR_DEPTH depth ){
+
+    // set color depth
+    this->depth = depth;
+
     // pin setting
     this->pin_DCCntl = pin_DCCntl;
     this->pin_RST = pin_RST;
