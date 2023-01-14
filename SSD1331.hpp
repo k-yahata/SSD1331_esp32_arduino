@@ -25,13 +25,18 @@ class SSD1331{
     int pin_DCCntl; // data or command
     int pin_RST;    // reset
     int pin_CS;     // chip select
+    enum COLOR_DEPTH{
+        COLOR_DEPTH_2BYTES = 2,
+        COLOR_DEPTH_1BYTES = 1
+    }
+    COLOR_DEPTH depth;
 
     public:
     // initialize pin setting, display settings
     //   pin_DCCntl: pin number for data/command control
     //   pin_RST:    pin number for reset
     //   pin_CS:     pin number for chip selection
-    void init( int pin_DCCntl, int pin_RST, int pin_CS );
+    void init( int pin_DCCntl, int pin_RST, int pin_CS, COLOR_DEPTH depth = COLOR_DEPTH_2BYTES );
 
     // Turn On the Display / ディスプレイ ON
     void on();
@@ -62,6 +67,7 @@ class SSD1331{
     private:
     void send_data( unsigned char *val, size_t n_bytes );
     void send_command( unsigned char val );
+    // Display Specific Commands
     void set_colmun_address( unsigned char start, unsigned char end); // 00-95
     void set_row_address( unsigned char start, unsigned char end); // 00-63
     void set_contrasts( unsigned char contrast_a, unsigned char contrast_b, unsigned char contrast_c ); // 0-255
@@ -112,9 +118,8 @@ class SSD1331{
     void set_vcomh( unsigned char level ); //0-31
     void set_command_lock( unsigned char lock ); // 0:unlock, 1: lock
 
-    // command
 
-    // draw command
+    // draw commands
 #ifdef __DRAW_COMMANDS_ENABLE__
     void clear_window( const unsigned char sx, const unsigned char sy, const unsigned char ex, const unsigned char ey );
 #endif
