@@ -1,4 +1,4 @@
-#include "Arduino.h"
+#include <Arduino.h>
 #include "SSD1331.hpp"
 void SSD1331::init( int pin_DCCntl, int pin_RST, int pin_CS ){
     // pin setting
@@ -17,7 +17,7 @@ void SSD1331::init( int pin_DCCntl, int pin_RST, int pin_CS ){
     digitalWrite(pin_CS, HIGH);
 
     SPI.begin();
-    SPI.setFrequency(6600000); //SSD1331 のSPI Clock Cycle Time 最低150ns
+    SPI.setFrequency(6600000); //SSD1331's SPI Clock Cycle Time : 150ns at least
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE3);
 
@@ -35,8 +35,8 @@ void SSD1331::init( int pin_DCCntl, int pin_RST, int pin_CS ){
     set_precharge_level(0x31);
     set_vcomh(31);
     set_master_current(1);
-    set_colmun_address(0,95);
-    set_row_address(0,63);
+    set_colmun_address(0,max_w);
+    set_row_address(0,max_h);
     set_contrasts( 255, 255, 255 );
     set_dim_mode( 255, 255, 255, 3 );
     //Serial.println("DEISPLAY ON");
@@ -68,39 +68,80 @@ void SSD1331::rotate(){
     set_remap_color_depth( HORIZONTAL_DIR::LR_FLIP, VERTICAL_DIR::TB_FLIP );    
 }
 
-void SSD1331::send_frame(unsigned short *p_data){
+void SSD1331::send_frame_65K(unsigned char *p_data){
     set_colmun_address( 0, max_w );
     set_row_address( 0, max_h );
     send_data( p_data, 12288 ); // 96 x 64 x 2
 }
 
 void SSD1331::send_frame(unsigned char *p_data){
+    Serial.println("1byte");
     set_colmun_address( 0, width );
     set_row_address( 0, max_h );
     send_data( p_data, 6144 ); // 96 x 64
 }
 
+// 部分データ送信 for 65536色
+void SSD1331::send_partial_data_65K( unsigned char *p_data, const char start_x, const char start_y, const char end_x, const char end_y ){
+    // 
+    try{
+        // first copy data to buffer then send it 
+        unsigned int size = 2 * ( end_x - start_x + 1 ) * ( end_y - start_y + 1 );
+        unsigned char* buffer = new unsigned char[ size ];
+        unsigned char* p_buf = buffer;
+        // data 
+        for( char y = start_y; y <= end_y; y++ ){
+            unsigned char* p_dat = &(p_data[ ( y * width + start_x ) * 2 ]);            
+            for( char n = 0; n < size; n++ ){
+                *p_buf = *p_dat;
+                p_dat++;
+                p_buf++;
+            }
+        }
+        set_colmun_address( start_x, end_x );
+        set_row_address( start_y, end_y );
+        send_data( buffer, 2 * size );
+        delete [] buffer; 
+    }catch(std::bad_alloc){
+        set_colmun_address( start_x, end_x );
+        set_row_address( start_y, end_y );
+        // send line by line
+        int size_in_bytes = 2 * ( end_x - start_x + 1 );
+        for( char y = start_y; y <= end_y; y++ ){
+            unsigned char *p = p_data + (y * width + start_x)*2;
+            send_data( p, size_in_bytes );
+        }
+    }
+}
+// 部分データ送信 for 256色
+void SSD1331::send_partial_data( unsigned char *p_data, const char start_x, const char start_y, const char end_x, const char end_y ){
+    try{
+        // first copy data to buffer then send it 
+        unsigned int size = ( end_x - start_x + 1 ) * ( end_y - start_y + 1 );
+        unsigned char *buffer = new unsigned char[ size ];
+        unsigned char *p = buffer;
+        for( char y = start_y; y <= end_y; y++ ){
+            for( char x = start_x; x <= end_x; x++ ){
+                *p = p_data[ y * width + x ];
+                p++;
+            }
+        }
+        set_colmun_address( start_x, end_x );
+        set_row_address( start_y, end_y );
+        send_data( buffer, size );
+        delete [] buffer; 
+    }catch(std::bad_alloc){
+        set_colmun_address( start_x, end_x );
+        set_row_address( start_y, end_y );
+        // send line by line
+        int size_in_bytes = ( end_x - start_x + 1 );
+        for( char y = start_y; y <= end_y; y++ ){
+            unsigned char *p = p_data + y * width + start_x;
+            send_data( p, size_in_bytes );
+        }
+    }
+}
 
-void SSD1331::send_data( unsigned char val ){
-    digitalWrite(pin_CS,LOW);  
-    digitalWrite( pin_DCCntl, HIGH );
-    SPI.write( val );
-    digitalWrite(pin_CS,HIGH);  
-}
-void SSD1331::send_data( unsigned short val ){
-    digitalWrite(pin_CS,LOW);  
-    digitalWrite( pin_DCCntl, HIGH );
-    SPI.write16( val );
-    digitalWrite(pin_CS,HIGH);  
-}
-// 
-void SSD1331::send_data( unsigned short *val, size_t n_bytes ){
-    void *p = reinterpret_cast<void*>(val);
-    digitalWrite(pin_CS,LOW);  
-    digitalWrite( pin_DCCntl, HIGH );
-    SPI.writePixels(p,n_bytes);
-    digitalWrite(pin_CS,HIGH);  
-}
 // 
 void SSD1331::send_data( unsigned char *val, size_t n_bytes ){
     digitalWrite( pin_CS,LOW);  
@@ -123,15 +164,15 @@ void range_check( unsigned char & val, const unsigned char min, const unsigned c
     if( val > max ) val = max;
 }
 void SSD1331::set_colmun_address( unsigned char start, unsigned char end){
-    range_check( start, 0, 95 );
-    range_check( end, 0, 95 );
+    range_check( start, 0, max_w );
+    range_check( end, 0, max_w );
     send_command( 0x15 );
     send_command( start );
     send_command( end );
 }
 void SSD1331::set_row_address( unsigned char start, unsigned char end){
-    range_check( start, 0, 63 );
-    range_check( end, 0, 63 );
+    range_check( start, 0, max_h );
+    range_check( end, 0, max_h );
     send_command( 0x75 );
     send_command( start );
     send_command( end );
@@ -176,12 +217,12 @@ void SSD1331::set_remap_color_depth(
 
 }
 void SSD1331::set_display_start_line( unsigned char line ){
-    range_check( line, 0, 0x63 );
+    range_check( line, 0, max_h );
     send_command( 0xa1 );
     send_command( line );
 }
 void SSD1331::set_display_offset( unsigned char line ){
-    range_check( line, 0, 0x63 );
+    range_check( line, 0, max_h );
     send_command( 0xa2 );
     send_command( line );
 }

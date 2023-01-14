@@ -50,15 +50,16 @@ class SSD1331{
     void v_flip();
 
     // フルフレームデータ送信 for 65536色モード
-    void send_frame(unsigned short *p_data); // send full frame (96x64x2bytes)
+    void send_frame_65K(unsigned char *p_data); // send full frame (96x64x2bytes)
     // フルフレームデータ送信 for 256色モード
     void send_frame(unsigned char *p_data);  // send full frame (96x64x1bytes)
+    // 部分データ送信 for 65536色
+    void send_partial_data_65K( unsigned char *p_data, const char start_x, const char start_y, const char end_x, const char end_y );
+    // 部分データ送信 for 256色
+    void send_partial_data( unsigned char *p_data, const char start_x, const char start_y, const char end_x, const char end_y );
 
 
     private:
-    void send_data( unsigned char val );
-    void send_data( unsigned short val );
-    void send_data( unsigned short *val, size_t n_pixel );
     void send_data( unsigned char *val, size_t n_bytes );
     void send_command( unsigned char val );
     void set_colmun_address( unsigned char start, unsigned char end); // 00-95
