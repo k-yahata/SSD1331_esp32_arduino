@@ -4,6 +4,15 @@
 // Class SSD1331
 // Driver of SSD1331 for ESP32(VSPI)
 // 
+#if CONFIG_IDF_TARGET_ESP32S3
+#define HARDWARE_CLOCK_PIN 12
+#define HARDWARE_MOSI_PIN 11
+#define HARDWARE_CS0_PIN 10
+#else
+#define HARDWARE_CLOCK_PIN 18
+#define HARDWARE_MOSI_PIN 23
+#define HARDWARE_CS0_PIN 5
+#endif
 
 #define DEFAULT_PIN_DC  6  // Data - Command Select
 #define DEFAULT_PIN_RST 7  // Reset
@@ -20,23 +29,18 @@ class SSD1331{
     static const char max_w = width-1;
     static const char max_h = height-1;
     // pin assign for ESP32 VSPI
-    static const int pin_SCLK = 18; // IO18 fixed
-    static const int pin_SDIN = 23; // IO23 fixed
+    static const int pin_SCLK = HARDWARE_CLOCK_PIN;
+    static const int pin_SDIN = HARDWARE_MOSI_PIN;
     int pin_DCCntl; // data or command
     int pin_RST;    // reset
     int pin_CS;     // chip select
-    enum COLOR_DEPTH{
-        COLOR_DEPTH_2BYTES = 2,
-        COLOR_DEPTH_1BYTES = 1
-    }
-    COLOR_DEPTH depth;
 
     public:
     // initialize pin setting, display settings
     //   pin_DCCntl: pin number for data/command control
     //   pin_RST:    pin number for reset
     //   pin_CS:     pin number for chip selection
-    void init( int pin_DCCntl, int pin_RST, int pin_CS, COLOR_DEPTH depth = COLOR_DEPTH_2BYTES );
+    void init( int pin_DCCntl, int pin_RST, int pin_CS );
 
     // Turn On the Display / ディスプレイ ON
     void on();
@@ -55,19 +59,21 @@ class SSD1331{
     void v_flip();
 
     // フルフレームデータ送信 for 65536色モード
-    void send_frame_65K(unsigned char *p_data); // send full frame (96x64x2bytes)
+    void send_frame(unsigned short *p_data); // send full frame (96x64x2bytes)
     // フルフレームデータ送信 for 256色モード
     void send_frame(unsigned char *p_data);  // send full frame (96x64x1bytes)
     // 部分データ送信 for 65536色
-    void send_partial_data_65K( unsigned char *p_data, const char start_x, const char start_y, const char end_x, const char end_y );
+    void send_partial_data( unsigned short *p_data, const char start_x, const char start_y, const char end_x, const char end_y );
     // 部分データ送信 for 256色
     void send_partial_data( unsigned char *p_data, const char start_x, const char start_y, const char end_x, const char end_y );
 
 
     private:
+    void send_data( unsigned char val );
+    void send_data( unsigned short val );
+    void send_data( unsigned short *val, size_t n_pixel );
     void send_data( unsigned char *val, size_t n_bytes );
     void send_command( unsigned char val );
-    // Display Specific Commands
     void set_colmun_address( unsigned char start, unsigned char end); // 00-95
     void set_row_address( unsigned char start, unsigned char end); // 00-63
     void set_contrasts( unsigned char contrast_a, unsigned char contrast_b, unsigned char contrast_c ); // 0-255
@@ -118,8 +124,9 @@ class SSD1331{
     void set_vcomh( unsigned char level ); //0-31
     void set_command_lock( unsigned char lock ); // 0:unlock, 1: lock
 
+    // command
 
-    // draw commands
+    // draw command
 #ifdef __DRAW_COMMANDS_ENABLE__
     void clear_window( const unsigned char sx, const unsigned char sy, const unsigned char ex, const unsigned char ey );
 #endif
